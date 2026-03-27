@@ -1,122 +1,101 @@
+
 <!DOCTYPE html>
 
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Scroll-Driven Image Sequence</title>
-<meta content="Scroll-Driven Image Sequence" property="og:title"/>
-<meta content="Fullscreen scroll-controlled animation using image sequences rendered on canvas" property="og:description"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="AI_SSISTANT" property="og:title"/>
+<meta content="AI_SSISTANT - Coming Soon" property="og:description"/>
 <meta content="website" property="og:type"/>
-<link href="assets/img_32x32_dbd3e377.png" rel="icon" type="image/png"/>
-<script src="assets/script_b241bd9c.js"></script>
-<script src="assets/script_09331ee3.js"></script>
-<script src="assets/script_2fd741ae.js"></script>
+<link href="assets/img_32x32_79ce1c5d.png" rel="icon"/>
+<title>AI_SSISTANT</title>
+<script src="assets/script_91dd0ba6.js"></script>
+<script src="assets/script_f71d9402.js"></script>
+<link href="assets/style_54df6b11.css" rel="stylesheet"/>
 <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        html { overflow-x: hidden; }
-        html, body { overscroll-behavior: none; background: #000; }
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #00bfff; }
+            5% { opacity: 0.85; text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
+            10% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #00bfff; }
+            15% { opacity: 0.4; text-shadow: none; }
+            16% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #00bfff; }
+            50% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 30px #0ff, 0 0 60px #0ff, 0 0 100px #00bfff; }
+            52% { opacity: 0.7; text-shadow: 0 0 5px #0ff, 0 0 10px #0ff; }
+            53% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #00bfff; }
+            80% { opacity: 1; text-shadow: 0 0 15px #0ff, 0 0 30px #0ff, 0 0 60px #0ff, 0 0 100px #00bfff; }
+            83% { opacity: 0.5; text-shadow: 0 0 5px #0ff; }
+            84% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #00bfff; }
+        }
 
-        #frame-canvas {
-            position: fixed;
-            top: 0;
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, -1px); }
+            80% { transform: translate(1px, 2px); }
+        }
+
+        @keyframes scanline {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        .title-cyber {
+            font-family: 'Orbitron', sans-serif;
+            color: #0ff;
+            animation: flicker 4s infinite, glitch 8s infinite;
+            letter-spacing: 0.15em;
+            position: relative;
+        }
+
+        .title-cyber::before,
+        .title-cyber::after {
+            content: 'AI_SSISTANT';
+            position: absolute;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
+            right: 0;
+            overflow: hidden;
             pointer-events: none;
         }
 
-        .loading-overlay {
+        .title-cyber::before {
+            top: -2px;
+            color: #f0f;
+            opacity: 0.15;
+            animation: glitch 3s infinite reverse;
+            clip-path: inset(0 0 60% 0);
+        }
+
+        .title-cyber::after {
+            top: 2px;
+            color: #0f0;
+            opacity: 0.15;
+            animation: glitch 2.5s infinite;
+            clip-path: inset(60% 0 0 0);
+        }
+
+        .scanline-overlay {
             position: fixed;
             inset: 0;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-            transition: opacity 0.8s ease, visibility 0.8s ease;
-        }
-        .loading-overlay.hidden {
-            opacity: 0;
-            visibility: hidden;
             pointer-events: none;
-        }
-
-        .progress-track {
-            width: 220px;
-            height: 3px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
             overflow: hidden;
-            margin-top: 18px;
-        }
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, rgba(255,255,255,0.6), #fff);
-            border-radius: 2px;
-            transition: width 0.2s ease;
+            z-index: 10;
         }
 
-        .scroll-hint {
-            position: fixed;
-            bottom: 36px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity 0.6s ease;
-        }
-        .scroll-hint.fade-out { opacity: 0; }
-
-        .scroll-hint .chevron {
-            width: 18px;
-            height: 18px;
-            border-right: 2px solid rgba(255,255,255,0.6);
-            border-bottom: 2px solid rgba(255,255,255,0.6);
-            transform: rotate(45deg);
-            animation: chevronBounce 1.8s ease-in-out infinite;
-        }
-        @keyframes chevronBounce {
-            0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.8; }
-            50% { transform: rotate(45deg) translate(4px, 4px); opacity: 0.3; }
-        }
-
-        .frame-counter {
-            position: fixed;
-            top: 14px;
-            right: 16px;
-            z-index: 50;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            pointer-events: none;
-            letter-spacing: 0.05em;
-        }
-
-        .scroll-progress-bar {
-            position: fixed;
-            top: 0;
+        .scanline-overlay::after {
+            content: '';
+            position: absolute;
             left: 0;
-            height: 2px;
-            width: 0%;
-            background: rgba(255,255,255,0.25);
-            z-index: 50;
-            transition: width 0.05s linear;
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 255, 255, 0.04);
+            animation: scanline 6s linear infinite;
         }
 
-        #scroll-runway {
-            width: 100%;
-            position: relative;
-            z-index: 0;
+        .subtitle {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            letter-spacing: 0.4em;
         }
     </style>
 <script>
@@ -132,361 +111,11 @@
                     // Implementation needed when code is downloaded
                 };
             </script></head>
-<body>
-<div class="loading-overlay" id="loading-overlay">
-<div class="text-white text-base font-light tracking-widest uppercase opacity-80">Loading Frames</div>
-<div class="progress-track">
-<div class="progress-fill" id="progress-fill"></div>
+<body class="bg-black min-h-screen flex items-center justify-center relative overflow-hidden">
+<div class="scanline-overlay"></div>
+<div class="text-center relative z-20">
+<h1 class="title-cyber text-5xl md:text-7xl lg:text-8xl font-black">AI_SSISTANT</h1>
+<p class="subtitle text-gray-500 text-sm md:text-base mt-6 font-normal uppercase tracking-widest">(COMING SOON)</p>
 </div>
-<div class="text-white text-xs font-light mt-4 opacity-40 tracking-wide" id="loading-text">0 / 0</div>
-</div>
-<div class="scroll-hint" id="scroll-hint">
-<span class="text-xs tracking-widest uppercase opacity-60">Scroll to play</span>
-<div class="chevron"></div>
-</div>
-<div class="frame-counter" id="frame-counter"></div>
-<div class="scroll-progress-bar" id="scroll-progress-bar"></div>
-<canvas id="frame-canvas"></canvas>
-<div id="scroll-runway"></div>
-<script>
-    (function () {
-        'use strict';
-
-        /* ============================================================
-           CONFIGURATION — Edit these values to match your project
-           ============================================================ */
-        const CONFIG = {
-            FRAME_COUNT: 150,
-            FRAME_PATH: './frames/',
-            FRAME_PREFIX: 'frame_',
-            FRAME_EXT: '.jpg',
-            FRAME_PAD: 4,
-            SCROLL_HEIGHT_MULTIPLIER: 7,
-            CONCURRENT_LOADS: 8,
-            CANVAS_BG: '#000000',
-            SHOW_COUNTER: true,
-            SHOW_PROGRESS_BAR: true,
-            DEMO_MODE: true
-        };
-
-        /* ============================================================
-           DOM REFERENCES
-           ============================================================ */
-        const canvas        = document.getElementById('frame-canvas');
-        const ctx           = canvas.getContext('2d');
-        const runway        = document.getElementById('scroll-runway');
-        const overlay       = document.getElementById('loading-overlay');
-        const progressFill  = document.getElementById('progress-fill');
-        const loadingText   = document.getElementById('loading-text');
-        const scrollHint    = document.getElementById('scroll-hint');
-        const frameCounter  = document.getElementById('frame-counter');
-        const progressBar   = document.getElementById('scroll-progress-bar');
-
-        /* ============================================================
-           STATE
-           ============================================================ */
-        const frames       = new Array(CONFIG.FRAME_COUNT);
-        let currentIndex   = 0;
-        let loadedCount    = 0;
-        let isReady        = false;
-        let hasScrolled    = false;
-        let rafPending     = false;
-
-        /* ============================================================
-           UTILITY
-           ============================================================ */
-        function zeroPad(n, len) {
-            let s = String(n);
-            while (s.length < len) s = '0' + s;
-            return s;
-        }
-
-        function framePath(i) {
-            return CONFIG.FRAME_PATH + CONFIG.FRAME_PREFIX + zeroPad(i + 1, CONFIG.FRAME_PAD) + CONFIG.FRAME_EXT;
-        }
-
-        function clamp(val, min, max) {
-            return Math.max(min, Math.min(max, val));
-        }
-
-        /* ============================================================
-           CANVAS SIZING
-           ============================================================ */
-        function sizeCanvas() {
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width  = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width  = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-
-        function sizeRunway() {
-            runway.style.height = (window.innerHeight * CONFIG.SCROLL_HEIGHT_MULTIPLIER) + 'px';
-        }
-
-        /* ============================================================
-           DRAWING
-           ============================================================ */
-        function renderFrame(index) {
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-
-            ctx.fillStyle = CONFIG.CANVAS_BG;
-            ctx.fillRect(0, 0, vw, vh);
-
-            if (CONFIG.DEMO_MODE) {
-                renderDemoFrame(index, vw, vh);
-                return;
-            }
-
-            const img = frames[index];
-            if (!img || !img.naturalWidth) return;
-
-            const imgW = img.naturalWidth;
-            const imgH = img.naturalHeight;
-
-            /* Height-fill scaling:
-               Scale image so its height === viewport height.
-               Center horizontally; crop or letterbox as needed. */
-            const scale = vh / imgH;
-            const dw = imgW * scale;
-            const dh = vh;
-            const dx = (vw - dw) / 2;
-            const dy = 0;
-
-            ctx.drawImage(img, dx, dy, dw, dh);
-        }
-
-        function renderDemoFrame(index, vw, vh) {
-            const t = index / Math.max(1, CONFIG.FRAME_COUNT - 1);
-            const hue = t * 360;
-
-            /* Background */
-            const bg = ctx.createLinearGradient(0, 0, vw * 0.3, vh);
-            bg.addColorStop(0, `hsl(${hue}, 55%, 8%)`);
-            bg.addColorStop(1, `hsl(${(hue + 80) % 360}, 50%, 12%)`);
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, vw, vh);
-
-            /* Grid of dots */
-            const cols = 12;
-            const rows = Math.ceil(vh / (vw / cols));
-            const cellW = vw / cols;
-            const cellH = vh / rows;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const cx = c * cellW + cellW / 2;
-                    const cy = r * cellH + cellH / 2;
-                    const dist = Math.sqrt(Math.pow(cx - vw / 2, 2) + Math.pow(cy - vh / 2, 2));
-                    const maxDist = Math.sqrt(vw * vw + vh * vh) / 2;
-                    const wave = Math.sin(t * Math.PI * 4 - dist / maxDist * Math.PI * 3);
-                    const radius = 2 + wave * 3;
-                    if (radius > 0.5) {
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                        ctx.fillStyle = `hsla(${(hue + dist / maxDist * 120) % 360}, 60%, 55%, ${0.15 + wave * 0.15})`;
-                        ctx.fill();
-                    }
-                }
-            }
-
-            /* Orbiting elements */
-            const orbCount = 6;
-            for (let i = 0; i < orbCount; i++) {
-                const a = t * Math.PI * 2 + (i / orbCount) * Math.PI * 2;
-                const orbitR = Math.min(vw, vh) * 0.22;
-                const ox = vw / 2 + Math.cos(a) * orbitR;
-                const oy = vh / 2 + Math.sin(a) * orbitR;
-                const size = 8 + Math.sin(a * 2) * 4;
-
-                ctx.beginPath();
-                ctx.arc(ox, oy, size, 0, Math.PI * 2);
-                ctx.fillStyle = `hsla(${(hue + i * 60) % 360}, 70%, 65%, 0.5)`;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(ox, oy, size + 6, 0, Math.PI * 2);
-                ctx.strokeStyle = `hsla(${(hue + i * 60) % 360}, 70%, 65%, 0.15)`;
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-
-            /* Central pulsing ring */
-            const ringR = Math.min(vw, vh) * 0.12 + Math.sin(t * Math.PI * 3) * 15;
-            ctx.beginPath();
-            ctx.arc(vw / 2, vh / 2, ringR, 0, Math.PI * 2);
-            ctx.strokeStyle = `hsla(${hue}, 70%, 75%, 0.35)`;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            /* Frame number */
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'rgba(255,255,255,0.85)';
-            ctx.font = `bold ${Math.min(vw, vh) * 0.065}px system-ui`;
-            ctx.fillText(String(index + 1), vw / 2, vh / 2 - 6);
-
-            ctx.font = `300 ${Math.min(vw, vh) * 0.02}px system-ui`;
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.fillText('DEMO MODE \u2014 place JPGs in /frames/', vw / 2, vh / 2 + Math.min(vw, vh) * 0.06);
-            ctx.fillText(`Frame ${index + 1} of ${CONFIG.FRAME_COUNT}  \u00B7  ${Math.round(t * 100)}%`, vw / 2, vh / 2 + Math.min(vw, vh) * 0.095);
-        }
-
-        function scheduleRender() {
-            if (rafPending) return;
-            rafPending = true;
-            requestAnimationFrame(function () {
-                rafPending = false;
-                renderFrame(currentIndex);
-            });
-        }
-
-        /* ============================================================
-           LOADING
-           ============================================================ */
-        function updateLoadingUI() {
-            const pct = Math.round((loadedCount / CONFIG.FRAME_COUNT) * 100);
-            progressFill.style.width = pct + '%';
-            loadingText.textContent = loadedCount + ' / ' + CONFIG.FRAME_COUNT;
-        }
-
-        function hideLoading() {
-            overlay.classList.add('hidden');
-            isReady = true;
-            renderFrame(0);
-        }
-
-
-            function loadAllFrames() {
-                return new Promise(function (resolve) {
-                    if (CONFIG.DEMO_MODE) {
-                        let simulated = 0;
-                        for (let i = 0; i < CONFIG.FRAME_COUNT; i++) {
-                            frames[i] = new Image();
-                        }
-                        const interval = setInterval(function () {
-                            simulated += Math.ceil(CONFIG.FRAME_COUNT / 30);
-                            if (simulated > CONFIG.FRAME_COUNT) simulated = CONFIG.FRAME_COUNT;
-                            loadedCount = simulated;
-                            updateLoadingUI();
-                            if (simulated >= CONFIG.FRAME_COUNT) {
-                                clearInterval(interval);
-                                resolve();
-                            }
-                        }, 60);
-                        return;
-                    }
-
-                    let nextIdx = 0;
-                    let active = 0;
-
-                    function onDone() {
-                        loadedCount++;
-                        active--;
-                        updateLoadingUI();
-                        if (loadedCount >= CONFIG.FRAME_COUNT) {
-                            resolve();
-                            return;
-                        }
-                        pump();
-                    }
-
-                    function pump() {
-                        while (active < CONFIG.CONCURRENT_LOADS && nextIdx < CONFIG.FRAME_COUNT) {
-                            const idx = nextIdx++;
-                            active++;
-                            const img = new Image();
-                            img.onload = function () {
-                                frames[idx] = img;
-                                onDone();
-                            };
-                            img.onerror = function () {
-                                frames[idx] = null;
-                                onDone();
-                            };
-                            img.src = framePath(idx);
-                        }
-                    }
-
-                    pump();
-                });
-            }
-
-            function initScrollTrigger() {
-                gsap.registerPlugin(ScrollTrigger);
-
-                const frameObj = { frame: 0 };
-
-                gsap.to(frameObj, {
-                    frame: CONFIG.FRAME_COUNT - 1,
-                    snap: 'frame',
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: '#scroll-runway',
-                        start: 'top top',
-                        end: 'bottom bottom',
-                        scrub: 0.15,
-                        onUpdate: function (self) {
-                            const newIndex = clamp(Math.round(frameObj.frame), 0, CONFIG.FRAME_COUNT - 1);
-                            if (newIndex !== currentIndex) {
-                                currentIndex = newIndex;
-                                scheduleRender();
-                            }
-
-                            if (CONFIG.SHOW_COUNTER) {
-                                frameCounter.textContent = (currentIndex + 1) + ' / ' + CONFIG.FRAME_COUNT;
-                            }
-                            if (CONFIG.SHOW_PROGRESS_BAR) {
-                                progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
-                            }
-
-                            if (!hasScrolled && self.progress > 0.01) {
-                                hasScrolled = true;
-                                scrollHint.classList.add('fade-out');
-                            }
-                        }
-                    }
-                });
-            }
-
-            let resizeTimer;
-            window.addEventListener('resize', function () {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(function () {
-                    sizeCanvas();
-                    sizeRunway();
-                    renderFrame(currentIndex);
-                    ScrollTrigger.refresh();
-                }, 150);
-            });
-
-            function init() {
-                sizeCanvas();
-                sizeRunway();
-
-                ctx.fillStyle = CONFIG.CANVAS_BG;
-                ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-
-                if (!CONFIG.SHOW_COUNTER) frameCounter.style.display = 'none';
-                if (!CONFIG.SHOW_PROGRESS_BAR) progressBar.style.display = 'none';
-
-                loadAllFrames().then(function () {
-                    hideLoading();
-                    setTimeout(function () {
-                        initScrollTrigger();
-                        ScrollTrigger.refresh();
-                    }, 100);
-                });
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
-        })();
-        
-    </script>
 </body>
 </html>
