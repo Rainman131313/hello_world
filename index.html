@@ -9,9 +9,9 @@
 <meta content="Fullscreen scroll-controlled animation using image sequences rendered on canvas" property="og:description"/>
 <meta content="website" property="og:type"/>
 <link href="assets/img_32x32_dbd3e377.png" rel="icon" type="image/png"/>
-<script src="assets/script_5c74d3ce.js"></script>
-<script src="assets/script_b050d653.js"></script>
-<script src="assets/script_61fd2afa.js"></script>
+<script src="assets/script_b241bd9c.js"></script>
+<script src="assets/script_09331ee3.js"></script>
+<script src="assets/script_2fd741ae.js"></script>
 <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         html { overflow-x: hidden; }
@@ -357,144 +357,136 @@
             renderFrame(0);
         }
 
-        function loadAllFrames() {
-            return new Promise(function (resolve) {
-                if (CONFIG.DEMO_MODE) {
-                    /* Simulate loading in demo mode */
-                    let simulated = 0;
-                    for (let i = 0; i < CONFIG.FRAME_COUNT; i++) {
-                        frames[i] = new Image();
-                    }
-                    const interval = setInterval(function () {
-                        simulated += Math.ceil(CONFIG.FRAME_COUNT / 30);
-                        if (simulated > CONFIG.FRAME_COUNT) simulated = CONFIG.FRAME_COUNT;
-                        loadedCount = simulated;
-                        updateLoadingUI();
-                        if (simulated >= CONFIG.FRAME_COUNT) {
-                            clearInterval(interval);
-                            resolve();
+
+            function loadAllFrames() {
+                return new Promise(function (resolve) {
+                    if (CONFIG.DEMO_MODE) {
+                        let simulated = 0;
+                        for (let i = 0; i < CONFIG.FRAME_COUNT; i++) {
+                            frames[i] = new Image();
                         }
-                    }, 60);
-                    return;
-                }
-
-                /* Real image loading with concurrency control */
-                let nextIdx = 0;
-                let active = 0;
-
-                function onDone() {
-                    loadedCount++;
-                    active--;
-                    updateLoadingUI();
-                    if (loadedCount >= CONFIG.FRAME_COUNT) {
-                        resolve();
+                        const interval = setInterval(function () {
+                            simulated += Math.ceil(CONFIG.FRAME_COUNT / 30);
+                            if (simulated > CONFIG.FRAME_COUNT) simulated = CONFIG.FRAME_COUNT;
+                            loadedCount = simulated;
+                            updateLoadingUI();
+                            if (simulated >= CONFIG.FRAME_COUNT) {
+                                clearInterval(interval);
+                                resolve();
+                            }
+                        }, 60);
                         return;
                     }
+
+                    let nextIdx = 0;
+                    let active = 0;
+
+                    function onDone() {
+                        loadedCount++;
+                        active--;
+                        updateLoadingUI();
+                        if (loadedCount >= CONFIG.FRAME_COUNT) {
+                            resolve();
+                            return;
+                        }
+                        pump();
+                    }
+
+                    function pump() {
+                        while (active < CONFIG.CONCURRENT_LOADS && nextIdx < CONFIG.FRAME_COUNT) {
+                            const idx = nextIdx++;
+                            active++;
+                            const img = new Image();
+                            img.onload = function () {
+                                frames[idx] = img;
+                                onDone();
+                            };
+                            img.onerror = function () {
+                                frames[idx] = null;
+                                onDone();
+                            };
+                            img.src = framePath(idx);
+                        }
+                    }
+
                     pump();
-                }
+                });
+            }
 
-                function pump() {
-                    while (active < CONFIG.CONCURRENT_LOADS && nextIdx < CONFIG.FRAME_COUNT) {
-                        const idx = nextIdx++;
-                        active++;
-                        const img = new Image();
-                        img.onload = function () {
-                            frames[idx] = img;
-                            onDone();
-                        };
-                        img.onerror = function () {
-                            frames[idx] = null;
-                            onDone();
-                        };
-                        img.src = framePath(idx);
-                    }
-                }
+            function initScrollTrigger() {
+                gsap.registerPlugin(ScrollTrigger);
 
-                pump();
-            });
-        }
+                const frameObj = { frame: 0 };
 
-        /* ============================================================
-           GSAP / SCROLLTRIGGER SETUP
-           ============================================================ */
-        function initScrollTrigger() {
-            gsap.registerPlugin(ScrollTrigger);
+                gsap.to(frameObj, {
+                    frame: CONFIG.FRAME_COUNT - 1,
+                    snap: 'frame',
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: '#scroll-runway',
+                        start: 'top top',
+                        end: 'bottom bottom',
+                        scrub: 0.15,
+                        onUpdate: function (self) {
+                            const newIndex = clamp(Math.round(frameObj.frame), 0, CONFIG.FRAME_COUNT - 1);
+                            if (newIndex !== currentIndex) {
+                                currentIndex = newIndex;
+                                scheduleRender();
+                            }
 
-            const frameObj = { frame: 0 };
+                            if (CONFIG.SHOW_COUNTER) {
+                                frameCounter.textContent = (currentIndex + 1) + ' / ' + CONFIG.FRAME_COUNT;
+                            }
+                            if (CONFIG.SHOW_PROGRESS_BAR) {
+                                progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
+                            }
 
-            gsap.to(frameObj, {
-                frame: CONFIG.FRAME_COUNT - 1,
-                snap: 'frame',
-                ease: 'none',
-                scrollTrigger: {
-                    trigger: '#scroll-runway',
-                    start: 'top top',
-                    end: 'bottom bottom',
-                    scrub: 0.15,
-                    onUpdate: function (self) {
-                        const newIndex = clamp(Math.round(frameObj.frame), 0, CONFIG.FRAME_COUNT - 1);
-                        if (newIndex !== currentIndex) {
-                            currentIndex = newIndex;
-                            scheduleRender();
-                        }
-
-                        /* Update UI elements */
-                        if (CONFIG.SHOW_COUNTER) {
-                            frameCounter.textContent = (currentIndex + 1) + ' / ' + CONFIG.FRAME_COUNT;
-                        }
-                        if (CONFIG.SHOW_PROGRESS_BAR) {
-                            progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
-                        }
-
-                        /* Hide scroll hint after first scroll */
-                        if (!hasScrolled && self.progress > 0.01) {
-                            hasScrolled = true;
-                            scrollHint.classList.add('fade-out');
+                            if (!hasScrolled && self.progress > 0.01) {
+                                hasScrolled = true;
+                                scrollHint.classList.add('fade-out');
+                            }
                         }
                     }
-                }
-            });
-        }
+                });
+            }
 
-        /* ============================================================
-           RESIZE HANDLER
-           ============================================================ */
-        let resizeTimer;
-        window.addEventListener('resize', function () {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function () {
+            let resizeTimer;
+            window.addEventListener('resize', function () {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () {
+                    sizeCanvas();
+                    sizeRunway();
+                    renderFrame(currentIndex);
+                    ScrollTrigger.refresh();
+                }, 150);
+            });
+
+            function init() {
                 sizeCanvas();
                 sizeRunway();
-                renderFrame(currentIndex);
-                ScrollTrigger.refresh();
-            }, 150);
-        });
 
-        /* ============================================================
-           INIT
-           ============================================================ */
-        function init() {
-            sizeCanvas();
-            sizeRunway();
+                ctx.fillStyle = CONFIG.CANVAS_BG;
+                ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-            ctx.fillStyle = CONFIG.CANVAS_BG;
-            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                if (!CONFIG.SHOW_COUNTER) frameCounter.style.display = 'none';
+                if (!CONFIG.SHOW_PROGRESS_BAR) progressBar.style.display = 'none';
 
-            if (!CONFIG.SHOW_COUNTER) frameCounter.style.display = 'none';
-            if (!CONFIG.SHOW_PROGRESS_BAR) progressBar.style.display = 'none';
+                loadAllFrames().then(function () {
+                    hideLoading();
+                    setTimeout(function () {
+                        initScrollTrigger();
+                        ScrollTrigger.refresh();
+                    }, 100);
+                });
+            }
 
-            loadAllFrames().then(function () {
-                hideLoading();
-                initScrollTrigger();
-            });
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-    })();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+        
     </script>
 </body>
 </html>
